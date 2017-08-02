@@ -1,0 +1,191 @@
+<!--TODO:
+          add Get all elements and create props that doesnt exists in web
+          add time when dash     started
+          add graphics view for the num vars
+          add some style bro
+-->
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script type="text/javascript">
+            var button = null;
+            var websocket = null;
+            var refreshTimer = null;
+            var userElement = null;
+            
+            function changeState(state)
+            {
+                var form = document.getElementById("all_props");
+                var inputs = form.getElementsByTagName("input");
+                for(var i = 0; i < inputs.length; i++)
+                {
+                    inputs[i].disabled = state;
+                }
+                
+            }
+            
+            function initForm()
+            {
+                var form = document.getElementById("all_props");
+                var inputs = form.getElementsByTagName("input");
+                for(var i = 0; i < inputs.length; i++)
+                {
+                    inputs[i].addEventListener("change", function(evt){
+                        changedElement = evt.srcElement;
+                        value = this.value;
+                        type = changedElement.name;
+                        Put(changedElement.id, value, type);
+                    });
+                    inputs[i].addEventListener("focus", function(evt){
+                        userElement = evt.srcElement;
+                    });
+                    inputs[i].addEventListener("blur", function(evt){
+                        userElement = null;
+                    });
+                }
+            }
+            
+            function Connect(ip)
+            {
+                initForm();
+                button = document.getElementById("communicationButton");
+                ip = "ws://" + ip + ":8000/"
+                websocket = new WebSocket(ip);
+                websocket.onopen = function(evt){onOpen(evt)};
+                websocket.onclose = function(evt){onClose(evt)};
+                websocket.onerror = function(evt){onError(evt)};
+                websocket.onmessage = function(evt){onMessage(evt)};
+                
+            }
+            
+            function disconnect()
+            {
+                websocket.close();
+                websocket = null;
+            }
+
+            function onOpen(evt)
+            {   
+                changeState(false);
+                document.getElementById("ipOrNumber").disabled = true;
+                console.log("Successful Connection");
+                button.innerHTML = "Discconnect";
+                button.onclick = disconnect;
+                Get("*");
+                refreshTimer = setInterval(refreshForm, 1000);
+            }
+
+            function onClose(evt)
+            {   
+                changeState(true);
+                document.getElementById("ipOrNumber").disabled = false;
+                console.log("Connection closed with code: " + evt.code);
+                button.innerHTML = "Connect";
+                button.onclick = function() {Connect(document.getElementById('ipOrNumber').value)};
+                clearInterval(refreshTimer)
+            }
+
+            function onMessage(evt)
+            {
+                console.log("Got data" + evt.data);
+                data = decodeJson(evt.data);
+                insertToForm(data);
+            }
+
+            function onError(evt)
+            {
+
+            }
+
+            function Put(key, value, type)
+            {
+                if(websocket != null)
+                {
+                    websocket.send("PUT " + key + " " + value + " " + type);
+                    console.log("Put key: " + key + " value: " + value);
+                }
+            }
+
+            function Get(key)
+            {
+                if(websocket != null)
+                {
+                    websocket.send("GET " + key);
+                }
+            }
+            
+            function refreshForm()
+            {
+                Get("*");                
+            }
+            
+            function insertToForm(data)
+            {
+                inputs = document.getElementById("all_props").getElementsByTagName("input");
+                for(key in data)
+                    {
+                        for(var i = 0; i < inputs.length; i++)
+                            {
+                                var inp = inputs[i];
+                                if(inp != userElement)
+                                    {
+                                    if(key == inp.id)
+                                        {
+                                            inp.value = data[key];
+                                        }
+                                    }
+                            }
+                    }
+            }
+            
+            function decodeJson(val)
+            {
+                return JSON.parse(val);
+            }
+            
+            
+        </script>
+        <link href="bootstrap3/css/bootstrap.min.css" rel="stylesheet">
+        <link href="style.css" rel="stylesheet">        
+    </head>
+    <body>
+        <div class="container" style="height:50px">
+            <div class = "row">
+                <div class="col-md-8">
+                    Dashboard for team 2630 ThunderBolts
+                </div>
+                <div class="col-md-4">
+                    <div class = "row">
+                        <form class = "form-inline">
+                            <div class = "form-group">
+                                <input type="text" id = "ipOrNumber" class="form-control text-center" placeholder="IP">
+                            </div>
+                            <div class = "form-group">
+                                <button type="button" id = "communicationButton" class="btn btn-default from-control" onclick="Connect( document.getElementById('ipOrNumber').value)">Connect</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        
+            <from id="all_props">
+                <div class="row">
+                    <div class = "col-md-4">
+                        <div class="form-group">
+                            <label for="index">index</label>
+                            <input type="text" class="form-control" id="index" name ="NUMBER" placeholder="index"/>
+                        </div>
+                    <div class="form-group">
+                            <label for="test">test</label>
+                            <input type="text" class="form-control" id="test" name ="NUMBER" placeholder="test"/>
+                        </div>
+                    </div>
+                </div>    
+            </from>
+        </div>
+    </body>
+    <script type="text/javascript">
+        changeState(true);
+    </script>
+</html>
